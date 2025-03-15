@@ -80,7 +80,7 @@
         let films = [];
         let currentSort = { column: null, direction: 'asc' };
 
-        fetch('/films.json')
+        fetch('https://raw.githubusercontent.com/DablSi/highest-grossing-films/refs/heads/main/films.json')
             .then(response => response.json())
             .then(data => {
                 films = data;
