@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Highest Grossing Films</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .filters {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f5f5f5;
+            cursor: pointer;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .sort-arrow {
+            display: inline-block;
+            width: 0;
+            height: 0;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+        .sort-arrow.asc {
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 5px solid #333;
+        }
+        .sort-arrow.desc {
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Highest Grossing Films Database</h1>
+    
+    <div class="filters">
+        <input type="text" id="searchInput" placeholder="Search by title...">
+        <select id="yearFilter">
+            <option value="">All Years</option>
+        </select>
+        <select id="countryFilter">
+            <option value="">All Countries</option>
+        </select>
+    </div>
+
+    <table id="filmsTable">
+        <thead>
+            <tr>
+                <th data-sort="title">Title <span class="sort-arrow"></span></th>
+                <th data-sort="director">Director <span class="sort-arrow"></span></th>
+                <th data-sort="release_year">Year <span class="sort-arrow"></span></th>
+                <th data-sort="country">Country <span class="sort-arrow"></span></th>
+                <th data-sort="box_office">Box Office <span class="sort-arrow"></span></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        let films = [];
+        let currentSort = { column: null, direction: 'asc' };
+
+        fetch('/films.json')
+            .then(response => response.json())
+            .then(data => {
+                films = data;
+                populateFilters();
+                renderTable();
+                setupEventListeners();
+            });
+
+        function populateFilters() {
+            const years = [...new Set(films.map(film => film.release_year).filter(Boolean))].sort();
+            const countries = [...new Set(films.map(film => film.country).filter(Boolean))].sort();
+
+            const yearFilter = document.getElementById('yearFilter');
+            const countryFilter = document.getElementById('countryFilter');
+
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+
+            countries.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                countryFilter.appendChild(option);
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.querySelector('#filmsTable tbody');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const selectedYear = document.getElementById('yearFilter').value;
+            const selectedCountry = document.getElementById('countryFilter').value;
+
+            let filteredFilms = films.filter(film => {
+                const matchesSearch = film.title.toLowerCase().includes(searchTerm);
+                const matchesYear = !selectedYear || film.release_year === parseInt(selectedYear);
+                const matchesCountry = !selectedCountry || film.country === selectedCountry;
+                return matchesSearch && matchesYear && matchesCountry;
+            });
+
+            if (currentSort.column) {
+                filteredFilms.sort((a, b) => {
+                    const aVal = a[currentSort.column] || '';
+                    const bVal = b[currentSort.column] || '';
+                    return currentSort.direction === 'asc' 
+                        ? String(aVal).localeCompare(String(bVal))
+                        : String(bVal).localeCompare(String(aVal));
+                });
+            }
+
+            tbody.innerHTML = filteredFilms.map(film => `
+                <tr>
+                    <td>${film.title || ''}</td>
+                    <td>${film.director || ''}</td>
+                    <td>${film.release_year || ''}</td>
+                    <td>${film.country || ''}</td>
+                    <td>${film.box_office || ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        function setupEventListeners() {
+            document.getElementById('searchInput').addEventListener('input', renderTable);
+            document.getElementById('yearFilter').addEventListener('change', renderTable);
+            document.getElementById('countryFilter').addEventListener('change', renderTable);
+
+            document.querySelectorAll('th[data-sort]').forEach(th => {
+                th.addEventListener('click', () => {
+                    const column = th.dataset.sort;
+                    if (currentSort.column === column) {
+                        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.column = column;
+                        currentSort.direction = 'asc';
+                    }
+                    
+                    document.querySelectorAll('.sort-arrow').forEach(arrow => {
+                        arrow.className = 'sort-arrow';
+                    });
+                    
+                    th.querySelector('.sort-arrow').className = 
+                        `sort-arrow ${currentSort.direction}`;
+                        
+                    renderTable();
+                });
+            });
+        }
+    </script>
+</body>
+</html>
